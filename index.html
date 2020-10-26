@@ -132,6 +132,7 @@
 			"bright cyan": {fg:96, bg:106, css_color:"#34e2e2"},
 			"white": {fg:97, bg:107, css_color:"#eeeeec"},
 		}
+		const styles = ["normal", "italic", "bold", "underline"]
 		const predefined = {
 			"short magenta": [
 				[],
@@ -180,7 +181,7 @@
 		for (let c of document.querySelector(".console.dark").children) {
 			light_console.appendChild(c.cloneNode(true))
 		}
-		function create_part_editor(content_sel, fg_sel, bg_sel){
+		function create_part_editor(content_sel, fg_sel, bg_sel, style_sel){
 			let part_ed = document.createElement("div")
 			part_ed.className = "prompt-part"
 			let content_select = document.createElement("select")
@@ -205,6 +206,17 @@
 					select.appendChild(option)
 				}
 				part_ed.appendChild(select)
+			}
+			let style_select = document.createElement("select")
+			style_select.className = "prompt-part-style"
+			part_ed.appendChild(style_select)
+			for (let style of styles) {
+				let option = document.createElement("option")
+				option.innerHTML = style
+				if (style==style_sel) {
+					option.selected = "selected"
+				}
+				style_select.appendChild(option)
 			}
 			return part_ed
 		}
@@ -231,10 +243,12 @@
 					let content_key = ed_part.querySelector(".prompt-part-content").value
 					let fg_select = ed_part.querySelector(".prompt-part-fg")
 					let bg_select = ed_part.querySelector(".prompt-part-bg")
+					let style_select = ed_part.querySelector(".prompt-part-style")
 					switch (content_key) {
 					case "none":
 						fg_select.disabled = true
 						bg_select.disabled = true
+						style_select.disabled = true
 						continue
 					case "username":
 						part.textContent = "canop"
@@ -247,10 +261,22 @@
 					}
 					fg_select.disabled = false
 					bg_select.disabled = false
+					style_select.disabled = false
 					let fg_color = colors[fg_select.value]
 					part.style.color = fg_color.css_color
 					let bg_color = colors[bg_select.value]
 					part.style.background = bg_color.css_color
+					switch (style_select.value) {
+					case "italic":
+						part.style.fontStyle = "italic"
+						break
+					case "underline":
+						part.style.textDecoration = "underline"
+						break
+					case "bold":
+						part.style.fontWeight = "bold"
+						break
+					}
 					prompt_parts.appendChild(part)
 				}
 			}
@@ -261,11 +287,23 @@
 				if (content_key=="none") continue
 				let fg_select = ed_part.querySelector(".prompt-part-fg")
 				let bg_select = ed_part.querySelector(".prompt-part-bg")
+				let style_select = ed_part.querySelector(".prompt-part-style")
 				let fg_color = colors[fg_select.value]
 				let bg_color = colors[bg_select.value]
 				ps1 += "\\["
-				if (!fg_color.fg||!bg_color.bg) ps1 += "\\e[00m"
-				if (fg_color.fg) ps1 += "\\e[" + fg_color.fg + "m"
+				let fgc = fg_color.fg || "0"
+				switch (style_select.value) {
+				case "italic":
+					fgc = ";3"
+					break
+				case "underline":
+					fgc += ";4"
+					break
+				case "bold":
+					fgc += ";1"
+					break
+				}
+				ps1 += "\\e[" + fgc + "m"
 				if (bg_color.bg) ps1 += "\\e[" + bg_color.bg + "m"
 				ps1 += "\\]"
 				ps1 += "\\" + {username:'u', host:'h', pwd:'w', time:'t'}[content_key]
