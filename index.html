@@ -1,0 +1,284 @@
+<html>
+<head>
+	<title>dystroy's prompter</title>
+	<style type="text/css">
+	html, body {
+		padding: 0;
+		margin: 0;
+	}
+	body {
+		color: #bbb;
+		background: #444;
+		padding: 40px 0;
+		font: 14px Monaco, monospace;
+	}
+	body {
+		width: 600px;
+		margin: auto;
+	}
+	h2 {
+		margin: 20px 0;
+		font: 22px Monaco, monospace;
+	}
+	a {
+		color: #ddd;
+	}
+	#prompt-editor {
+	}
+	#prompt-editor .prompt-parts {
+		flex: 1 1 auto;
+		display: flex;
+		flex-direction: row;
+		justify-content: space-around;
+	}
+	#prompt-editor .prompt-part {
+		display: flex;
+		flex-direction: column;
+		border: thin solid blue;
+		margin: 15px 0;
+	}
+	.console {
+		font: 16px Monaco, monospace;
+		padding: 20px 0;
+		line-height: 20px;
+	}
+	.console.dark {
+		color: #ddd;
+		background: #292929;
+	}
+	.console.light {
+		color: #333;
+		background: #f7f3c6;
+	}
+	.console .prompt {
+		padding-right: 8px;
+	}
+	.line, .console .prompt, .console .prompt-parts {
+		display: flex;
+		flex-direction: row;
+	}
+	.dir {
+		font-weight: bold;
+		color: #7094bc;
+	}
+	#ps1 {
+		padding: 4px;
+		border: thin dashed #999;
+	}
+	</style>
+</head>
+<body>
+	<!-- author: Denys Séguret - cano.petrole@gmail.com -->
+	<p>This editor lets you design a bash prompt for your console.</p>
+	<p>Reasonning behind this prompt and technical details in <a href=https://dystroy.org/blog/prompts/>this blog article</a>.</p>
+	<p>Beware that it won't look exactly the same for you as colors and fonts depend on your OS and console settings.</p>
+	<h2>Edit Prompt Parts</h2>
+	<div id=prompt-editor>
+		Predefined prompts: <select id=predefined></select><br>
+		<div class=prompt-parts>
+		</div>
+	</div>
+	<div id=prompt-viewer>
+		<h2>Dark Preview</h2>
+		<div class="console dark">
+			<div class=line pwd="~" time="21:54:03">
+				<div class=prompt></div>
+				<div>ps</div>
+			</div>
+			<div class=line time="21:54:07">no process found</div>
+			<div class=line pwd="~" time="21:54:07">
+				<div class=prompt></div>
+				<div>cd dev/prompter</div>
+			</div>
+			<div class=line pwd="~/dev/prompter" time="21:54:12">
+				<div class=prompt></div>
+				<div>ls -a</div>
+			</div>
+			<div class=line time="21:54:12">
+				<span class=dir>.</span> &nbsp;
+				<span class=dir>..</span> &nbsp;
+				<span class=dir>.git</span> &nbsp;
+				index.html</div>
+			<div class=line pwd="~/dev/prompter" time="21:54:12">
+				<div class=prompt></div>
+			</div>
+		</div>
+		<h2>Light Preview</h2>
+		<div class="console light">
+			<!-- will be filled from dark content -->
+		</div>
+		<h2>Copy and Paste in ~/.bashrc</h2>
+		<p id=ps1></p>
+	</div>
+	<script>
+		const ed = document.querySelector("#prompt-editor .prompt-parts")
+		const contents = ["none", "time", "username", "host", "pwd"]
+		const colors = {
+			"default": {css_color:"inherit"},
+			"black": {fg:30, bg:40, css_color:"#2e3436"},
+			"red": {fg:31, bg:41, css_color:"#cd220b"},
+			"green": {fg:30, bg:42, css_color:"#4e9a06"},
+			"yellow": {fg:33, bg:43, css_color:"#c4a012"},
+			"blue": {fg:34, bg:44, css_color:"#2a5d92"},
+			"magenta": {fg:35, bg:45, css_color:"#75507b"},
+			"cyan": {fg:36, bg:46, css_color:"#45989a"},
+			"light gray": {fg:37, bg:47, css_color:"#d3d7cf"},
+			"gray": {fg:90, bg:100, css_color:"#555753"},
+			"bright red": {fg:91, bg:101, css_color:"#e92828"},
+			"bright green": {fg:92, bg:102, css_color:"#8ae234"},
+			"bright yellow": {fg:93, bg:103, css_color:"#fbe94f"},
+			"bright blue": {fg:94, bg:104, css_color:"#729fcf"},
+			"bright magenta": {fg:95, bg:105, css_color:"#ad7fa8"},
+			"bright cyan": {fg:96, bg:106, css_color:"#34e2e2"},
+			"white": {fg:97, bg:107, css_color:"#eeeeec"},
+		}
+		const predefined = {
+			"short magenta": [
+				[],
+				["host", "light gray", "magenta"],
+				[],
+				["pwd", "white", "bright magenta"],
+			],
+			"short green": [
+				[],
+				["username", "black", "green"],
+				[],
+				["pwd", "black", "bright green"],
+			],
+			"long blue": [
+				["host", "black", "blue"],
+				["username", "black", "cyan"],
+				["time", "black", "blue"],
+				["pwd", "blue", "bright blue"],
+			],
+			"short cyan": [
+				[],
+				[],
+				["username", "black", "bright cyan"],
+				["pwd", "bright cyan", "cyan"],
+			],
+			"short gold": [
+				[],
+				["time", "black", "yellow"],
+				[],
+				["pwd", "black", "bright yellow"],
+			],
+			"medium gray": [
+				["time", "black", "light gray"],
+				["username", "black", "gray"],
+				[],
+				["pwd", "white", "black"],
+			],
+		}
+		let pre_select = document.getElementById("predefined")
+		for (let name in predefined) {
+			let option = document.createElement("option")
+			option.innerHTML = name
+			pre_select.appendChild(option)
+		}
+		let light_console = document.querySelector(".console.light");
+		for (let c of document.querySelector(".console.dark").children) {
+			light_console.appendChild(c.cloneNode(true))
+		}
+		function create_part_editor(content_sel, fg_sel, bg_sel){
+			let part_ed = document.createElement("div")
+			part_ed.className = "prompt-part"
+			let content_select = document.createElement("select")
+			content_select.className = "prompt-part-content"
+			for (let content of contents) {
+				let option = document.createElement("option")
+				option.innerHTML = content
+				if (content==content_sel) {
+					option.selected = "selected"
+				}
+				content_select.appendChild(option)
+			}
+			part_ed.appendChild(content_select)
+			for (let key of ["fg", "bg"]) {
+				let select = document.createElement("select")
+				select.className = "prompt-part-"+key
+				for (let name in colors) {
+					let option = document.createElement("option")
+					option.innerHTML = name
+					let sel = key=="fg" ? fg_sel : bg_sel
+					if (sel==name) option.selected = "selected"
+					select.appendChild(option)
+				}
+				part_ed.appendChild(select)
+			}
+			return part_ed
+		}
+		function apply_predefined(){
+			while (child = ed.firstElementChild) child.remove()
+			for (let pp of predefined[pre_select.value]) {
+				let select = create_part_editor.apply(null, pp)
+				ed.appendChild(select)
+				select.addEventListener("change", fill_viewer)
+			}
+			fill_viewer()
+		}
+		pre_select.addEventListener("change", apply_predefined)
+		function fill_viewer(){
+			let editor_parts = document.querySelectorAll("#prompt-editor .prompt-parts .prompt-part")
+			// consoles
+			for (let prompt of document.querySelectorAll("#prompt-viewer .prompt")) {
+				while (child = prompt.firstElementChild) child.remove()
+				let prompt_parts = document.createElement("div")
+				prompt_parts.className = "prompt-parts"
+				prompt.appendChild(prompt_parts)
+				for (let ed_part of editor_parts) {
+					let part = document.createElement("div")
+					let content_key = ed_part.querySelector(".prompt-part-content").value
+					let fg_select = ed_part.querySelector(".prompt-part-fg")
+					let bg_select = ed_part.querySelector(".prompt-part-bg")
+					switch (content_key) {
+					case "none":
+						fg_select.disabled = true
+						bg_select.disabled = true
+						continue
+					case "username":
+						part.textContent = "canop"
+						break
+					case "host":
+						part.textContent = "my_computer"
+						break
+					default:
+						part.textContent = prompt.parentElement.getAttribute(content_key)
+					}
+					fg_select.disabled = false
+					bg_select.disabled = false
+					let fg_color = colors[fg_select.value]
+					part.style.color = fg_color.css_color
+					let bg_color = colors[bg_select.value]
+					part.style.background = bg_color.css_color
+					prompt_parts.appendChild(part)
+				}
+			}
+			// PS1
+			let ps1 = "PS1='"
+			for (let ed_part of editor_parts) {
+				let content_key = ed_part.querySelector(".prompt-part-content").value
+				if (content_key=="none") continue
+				let fg_select = ed_part.querySelector(".prompt-part-fg")
+				let bg_select = ed_part.querySelector(".prompt-part-bg")
+				let fg_color = colors[fg_select.value]
+				let bg_color = colors[bg_select.value]
+				ps1 += "\\["
+				if (!fg_color.fg||!bg_color.bg) ps1 += "\\e[00m"
+				if (fg_color.fg) ps1 += "\\e[" + fg_color.fg + "m"
+				if (bg_color.bg) ps1 += "\\e[" + bg_color.bg + "m"
+				ps1 += "\\]"
+				ps1 += "\\" + {username:'u', host:'h', pwd:'w', time:'t'}[content_key]
+			}
+			ps1 += "\\[\\e[00m\\] '"
+			document.getElementById("ps1").innerHTML = ps1
+
+		}
+		ed.appendChild(create_part_editor("none", "gray", "yellow"))
+		ed.appendChild(create_part_editor("username", "black", "green"))
+		ed.appendChild(create_part_editor("none", "gray", "yellow"))
+		ed.appendChild(create_part_editor("pwd", "black", "bright green"))
+		apply_predefined()
+	</script>
+</body>
+</html>
