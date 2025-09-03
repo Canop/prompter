@@ -1,6 +1,6 @@
 
 
-A single web page helping you define your bash prompt.
+A single web page helping you define your bash or zsh prompt.
 
 It's live at [https://dystroy.org/prompter](https://dystroy.org/prompter).
 
