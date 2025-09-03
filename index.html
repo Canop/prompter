@@ -13,7 +13,7 @@
 		font: 14px Monaco, monospace;
 	}
 	body {
-		width: 600px;
+		width: 700px;
 		margin: auto;
 	}
 	h2 {
@@ -61,7 +61,7 @@
 		font-weight: bold;
 		color: #7094bc;
 	}
-	#ps1 {
+	#ps1_zsh, #ps1_bash {
 		padding: 4px;
 		border: thin dashed #999;
 	}
@@ -78,7 +78,7 @@
 </head>
 <body>
 	<!-- author: Denys Séguret - cano.petrole@gmail.com -->
-	<p>This editor lets you design a bash prompt for your console.</p>
+	<p>This editor lets you design a prompt for your bash or zsh shell.</p>
 	<p>Reasonning behind this prompt and technical details in <a href=https://dystroy.org/blog/prompts/>this blog article</a>.</p>
 	<p>Beware that it won't look exactly the same for you as colors and fonts depend on your OS and console settings.</p>
 	<h2>Edit Prompt Parts</h2>
@@ -117,7 +117,9 @@
 			<!-- will be filled from dark content -->
 		</div>
 		<h2>Copy and Paste in ~/.bashrc</h2>
-		<p id=ps1></p>
+		<p id=ps1_bash></p>
+		<h2>Or Copy and Paste in ~/.zshrc</h2>
+		<p id=ps1_zsh></p>
 	</div>
 	<script>
 		// the framework
@@ -139,22 +141,22 @@
 		const contents = ["none", "time", "username", "host", "pwd"]
 		const colors = {
 			"default": {css_color:"inherit"},
-			"black": {fg:30, bg:40, css_color:"#2e3436"},
-			"red": {fg:31, bg:41, css_color:"#cd220b"},
-			"green": {fg:30, bg:42, css_color:"#4e9a06"},
-			"yellow": {fg:33, bg:43, css_color:"#c4a012"},
-			"blue": {fg:34, bg:44, css_color:"#2a5d92"},
-			"magenta": {fg:35, bg:45, css_color:"#75507b"},
-			"cyan": {fg:36, bg:46, css_color:"#45989a"},
-			"light gray": {fg:37, bg:47, css_color:"#d3d7cf"},
-			"gray": {fg:90, bg:100, css_color:"#555753"},
-			"bright red": {fg:91, bg:101, css_color:"#e92828"},
-			"bright green": {fg:92, bg:102, css_color:"#8ae234"},
-			"bright yellow": {fg:93, bg:103, css_color:"#fbe94f"},
-			"bright blue": {fg:94, bg:104, css_color:"#729fcf"},
-			"bright magenta": {fg:95, bg:105, css_color:"#ad7fa8"},
-			"bright cyan": {fg:96, bg:106, css_color:"#34e2e2"},
-			"white": {fg:97, bg:107, css_color:"#eeeeec"},
+			"black": {fg:30, bg:40, ansi:0, css_color:"#2e3436"},
+			"red": {fg:31, bg:41, ansi:1, css_color:"#cd220b"},
+			"green": {fg:30, bg:42, ansi:2, css_color:"#4e9a06"},
+			"yellow": {fg:33, bg:43, ansi:3, css_color:"#c4a012"},
+			"blue": {fg:34, bg:44, ansi:4, css_color:"#2a5d92"},
+			"magenta": {fg:35, bg:45, ansi:5, css_color:"#75507b"},
+			"cyan": {fg:36, bg:46, ansi:6, css_color:"#45989a"},
+			"light gray": {fg:37, bg:47, ansi:7, css_color:"#d3d7cf"},
+			"gray": {fg:90, bg:100, ansi:8, css_color:"#555753"},
+			"bright red": {fg:91, bg:101, ansi:9, css_color:"#e92828"},
+			"bright green": {fg:92, bg:102, ansi:10, css_color:"#8ae234"},
+			"bright yellow": {fg:93, bg:103, ansi:11, css_color:"#fbe94f"},
+			"bright blue": {fg:94, bg:104, ansi:12, css_color:"#729fcf"},
+			"bright magenta": {fg:95, bg:105, ansi:13, css_color:"#ad7fa8"},
+			"bright cyan": {fg:96, bg:106, ansi:14, css_color:"#34e2e2"},
+			"white": {fg:97, bg:107, ansi:15, css_color:"#eeeeec"},
 		}
 		const styles = ["normal", "italic", "bold", "underline"]
 		const predefined = {
@@ -290,7 +292,11 @@
 				}
 			}
 			// PS1
-			let ps1 = "PS1='"
+			document.getElementById("ps1_bash").innerHTML = `PS1='${make_ps1('bash', editor_parts)}'`
+			document.getElementById("ps1_zsh").innerHTML = `PS1='${make_ps1('zsh', editor_parts)}'`
+		}
+		function make_ps1(shell, editor_parts) { // shell is either 'bash' or 'zsh'
+			let ps1 = "";
 			for (let ed_part of editor_parts) {
 				let content_key = ed_part.querySelector(".prompt-part-content").value
 				if (content_key=="none") continue
@@ -299,29 +305,57 @@
 				let style_select = ed_part.querySelector(".prompt-part-style")
 				let fg_color = colors[fg_select.value]
 				let bg_color = colors[bg_select.value]
-				ps1 += "\\[\\e["
-				switch (style_select.value) {
-				case "italic":
-					ps1 += "3;"
-					break
-				case "underline":
-					ps1 += "4;"
-					break
-				case "bold":
-					ps1 += "1;"
-					break
-				default:
-					ps1 += "0;"
+				if (shell == 'zsh') {
+					ps1 += "%{"
+					switch (style_select.value) {
+					case "italic":
+						ps1 += "%S"
+						break
+					case "underline":
+						ps1 += "%U"
+						break
+					case "bold":
+						ps1 += "%B"
+						break
+					default:
+					}
+					if (fg_color) ps1 += "%F{" + (fg_color.ansi) + "}"
+					if (bg_color) ps1 += "%K{" + (bg_color.ansi) + "}"
+					ps1 += "%}"
+					let content = {username:'n', host:'m', pwd:'~', time:'T'}[content_key]
+					ps1 += "%" + content
+					ps1 += '%{%f%k%b%s%u%}' // reset colors and style
+				} else { // 'bash'
+					ps1 += "\\[\\e["
+					switch (style_select.value) {
+					case "italic":
+						ps1 += "3;"
+						break
+					case "underline":
+						ps1 += "4;"
+						break
+					case "bold":
+						ps1 += "1;"
+						break
+					default:
+						ps1 += "0;"
+					}
+					ps1 += fg_color.fg || "0"
+					ps1 += "m"
+					if (bg_color) ps1 += "\\e[" + bg_color.bg + "m"
+					ps1 += "\\]"
+					let content = {username:'u', host:'h', pwd:'w', time:'t'}[content_key]
+					ps1 += "\\" + content
+					ps1 += "\\[\\e[00m\\]" // reset colors and style
 				}
-				ps1 += fg_color.fg || "0"
-				ps1 += "m"
-				if (bg_color.bg) ps1 += "\\e[" + bg_color.bg + "m"
-				ps1 += "\\]"
-				ps1 += "\\" + {username:'u', host:'h', pwd:'w', time:'t'}[content_key]
 			}
-			ps1 += "\\[\\e[00m\\] '"
-			document.getElementById("ps1").innerHTML = ps1
-
+			if (shell == 'zsh') {
+				ps1 += '%{%f%k%b%}'
+			} else {
+				ps1 += "\\[\\e[00m\\]"
+			}
+			ps1 += " "
+			return ps1
 		}
 		apply_predefined()
 	</script>
